@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "python agent_facturation.py"
+cronSchedule = "0 6 * * *"
+restartPolicyType = "NEVER"
