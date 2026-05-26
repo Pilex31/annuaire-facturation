@@ -19,6 +19,8 @@ Variables d'environnement requises :
 
 import os
 import sys
+import re
+import unicodedata
 from datetime import datetime, date, timedelta
 from supabase import create_client, Client
 
@@ -62,6 +64,21 @@ def get_emetteur() -> dict:
 
 def log(msg: str):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+def nettoyer_nom_fichier(texte: str) -> str:
+    """
+    Nettoie une chaîne pour qu'elle soit un nom de fichier valide
+    pour Supabase Storage : pas d'accents, pas d'espaces, pas de
+    caractères spéciaux. Garde lettres, chiffres, tirets, underscores.
+    """
+    # Décomposer les accents (é -> e + accent) puis retirer les accents
+    sans_accents = unicodedata.normalize("NFKD", texte)
+    sans_accents = sans_accents.encode("ascii", "ignore").decode("ascii")
+    # Remplacer tout ce qui n'est pas alphanumérique par un underscore
+    propre = re.sub(r"[^A-Za-z0-9]+", "_", sans_accents)
+    # Retirer les underscores en début/fin
+    return propre.strip("_")
 
 
 def get_supabase() -> Client:
@@ -186,7 +203,8 @@ def facturer_client(supabase: Client, client: dict, emetteur: dict) -> dict:
 
     # Génération du PDF dans un dossier temporaire
     import tempfile
-    nom_fichier = f"{numero}_{client['nom_entreprise'][:30].replace(' ', '_').replace('/', '-')}.pdf"
+    nom_propre = nettoyer_nom_fichier(client["nom_entreprise"][:40])
+    nom_fichier = f"{numero}_{nom_propre}.pdf"
     chemin_temp = os.path.join(tempfile.gettempdir(), nom_fichier)
     generer_facture(facture_pdf, emetteur, chemin_temp)
 
